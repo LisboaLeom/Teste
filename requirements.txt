@@ -2,6 +2,8 @@ streamlit
 langchain
 langchain-community
 langchain-openai
+langchain-core
 openai
 tiktoken
 python-dotenv
+neo4j
