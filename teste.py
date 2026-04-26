@@ -3,9 +3,11 @@ import os
 from dotenv import load_dotenv
 
 # Imports corretos para 2026
-from langchain_openai import ChatOpenAI
-from langchain_community.memory import ConversationSummaryBufferMemory
-from langchain_community.chains import ConversationChain
+# Use estes caminhos exatos:
+from langchain.memory import ConversationSummaryBufferMemory  # CORE
+from langchain.chains import ConversationChain               # CORE
+from langchain_openai import ChatOpenAI                     # PARTNER
+from langchain_community.chat_message_histories import StreamlitChatMessageHistory # COMMUNITY
 from langchain_core.prompts import (
     ChatPromptTemplate,
     MessagesPlaceholder,
