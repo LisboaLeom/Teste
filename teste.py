@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 # Imports corretos para 2026
 from langchain_openai import ChatOpenAI
-from langchain_community.memory import ConversationSummaryBufferMemory
+from langchain.memory.summary_buffer import ConversationSummaryBufferMemory
 from langchain_community.chains import ConversationChain
 from langchain_core.prompts import (
     ChatPromptTemplate,
