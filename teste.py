@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
+import httpx
 
 from langchain_openai import ChatOpenAI
 from langchain.chains import ConversationChain
@@ -28,22 +29,21 @@ st.set_page_config(
 # ==========================================
 @st.cache_resource
 def init_llm_and_memory():
+    client = httpx.Client()  # sem proxies
+
     llm = ChatOpenAI(
         model="gpt-4o-mini",
         temperature=0.3,
-        max_tokens=500
+        max_tokens=500,
+        http_client=client  # 🔥 ISSO resolve
     )
 
     memory = ConversationSummaryBufferMemory(
         llm=llm,
-        max_token_limit=1000,
-        return_messages=True
+        max_token_limit=1000
     )
 
     return llm, memory
-
-
-llm, memory = init_llm_and_memory()
 
 # ==========================================
 # VALIDAÇÃO DE CARGO
