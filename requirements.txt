@@ -5,3 +5,6 @@ langchain-openai
 openai
 tiktoken
 python-dotenv
+langchain-core
+neo4j
+python-dotenv
