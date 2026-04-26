@@ -27,15 +27,17 @@ st.set_page_config(
 # ==========================================
 # LLM
 # ==========================================
+
 @st.cache_resource
 def init_llm_and_memory():
-    client = httpx.Client()  # sem proxies
+    client = httpx.Client()
 
     llm = ChatOpenAI(
         model="gpt-4o-mini",
         temperature=0.3,
         max_tokens=500,
-        http_client=client  # 🔥 ISSO resolve
+        api_key=st.secrets["OPENAI_API_KEY"],  # 🔥 AQUI
+        http_client=client
     )
 
     memory = ConversationSummaryBufferMemory(
