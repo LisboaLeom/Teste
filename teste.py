@@ -32,14 +32,12 @@ st.set_page_config(
 def init_llm_and_memory():
     client = httpx.Client()
 
-    llm = ChatOpenAI(
-        model="gpt-4o-mini",
-        temperature=0.3,
-        max_tokens=500,
-        api_key=st.secrets["OPENAI_API_KEY"],  # 🔥 AQUI
-        http_client=client
-    )
-
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0.3,
+    max_tokens=500,
+    api_key=st.secrets["OPENAI_API_KEY"]
+)
     memory = ConversationSummaryBufferMemory(
         llm=llm,
         max_token_limit=1000
