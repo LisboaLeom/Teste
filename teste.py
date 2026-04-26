@@ -30,11 +30,17 @@ st.set_page_config(
 
 @st.cache_resource
 def init_llm_and_memory():
+    # Criamos um cliente httpx manual. 
+    # Isso impede que o LangChain tente injetar configurações de proxy do sistema
+    # que o SDK da OpenAI não aceita mais como argumento direto.
+    client = httpx.Client()
+
     llm = ChatOpenAI(
         model="gpt-4o-mini",
         temperature=0.3,
         max_tokens=500,
-        api_key=st.secrets["OPENAI_API_KEY"]
+        api_key=st.secrets["OPENAI_API_KEY"],
+        http_client=client # Esta linha resolve o erro de 'proxies'
     )
 
     memory = ConversationSummaryBufferMemory(
