@@ -13,22 +13,18 @@ from langchain_core.prompts import (
 )
 
 # ==========================================
-# CARREGAR VARIÁVEIS DE AMBIENTE
+# CONFIG
 # ==========================================
 load_dotenv()
 
-# ==========================================
-# CONFIGURAÇÃO DA PÁGINA
-# ==========================================
 st.set_page_config(
-    page_title="SimulAI - Entrevistador Técnico",
+    page_title="Plataforma de Entrevista",
     page_icon="🤖",
     layout="centered"
 )
 
-
 # ==========================================
-# 1. INICIALIZAÇÃO DA IA E MEMÓRIA (OpenAI)
+# LLM
 # ==========================================
 @st.cache_resource
 def init_llm_and_memory():
@@ -49,21 +45,85 @@ def init_llm_and_memory():
 
 llm, memory = init_llm_and_memory()
 
+# ==========================================
+# VALIDAÇÃO DE CARGO
+# ==========================================
+def is_cargo_valido(cargo: str):
+    cargo = cargo.strip()
+
+    if len(cargo) < 3:
+        return False
+
+    if not any(c.isalpha() for c in cargo):
+        return False
+
+    palavras = cargo.split()
+    if len(palavras) == 1 and len(palavras[0]) < 4:
+        return False
+
+    return True
 
 # ==========================================
-# 2. DEFINIÇÃO DE PROMPTS
+# CLASSIFICAÇÃO DE VAGA (MELHORADA)
+# ==========================================
+def classificar_vaga(cargo: str):
+    cargo = cargo.lower()
+
+    tech = ["dev", "developer", "software", "backend", "frontend", "dados", "ti", "programador", "engenheiro"]
+    estagio = ["estágio", "estagio", "trainee"]
+    corporativo = ["marketing", "vendas", "financeiro", "rh", "administrativo", "analista"]
+    operacional = ["garçom", "cozinheiro", "atendente", "motorista", "caixa"]
+
+    if any(p in cargo for p in tech):
+        return "tecnologia"
+    elif any(p in cargo for p in estagio):
+        return "estagio"
+    elif any(p in cargo for p in corporativo):
+        return "corporativo"
+    elif any(p in cargo for p in operacional):
+        return "operacional"
+    else:
+        return "geral"
+
+# ==========================================
+# PROMPTS (FORTE)
 # ==========================================
 def get_interview_prompt(cargo):
-    system_template = f"""
-    Você é um Engenheiro de Software Sênior e Recrutador conduzindo uma entrevista técnica para a vaga de '{cargo}'.
+    categoria = classificar_vaga(cargo)
 
-    Regras estritas:
-    1. Faça APENAS UMA pergunta por vez.
-    2. Aguarde a resposta do candidato.
-    3. Avalie criticamente a resposta.
-    4. Se estiver superficial, aprofunde com perguntas.
-    5. Seja profissional, educado e exigente.
-    6. Comece com uma saudação e a primeira pergunta técnica.
+    system_template = f"""
+    Você é um entrevistador especialista conduzindo uma entrevista profissional.
+
+    Vaga: {cargo}
+    Categoria: {categoria}
+
+    ⚠️ REGRA PRINCIPAL:
+    Você DEVE adaptar COMPLETAMENTE as perguntas para essa categoria.
+
+    INSTRUÇÕES OBRIGATÓRIAS:
+
+    Se categoria = tecnologia:
+    - Faça perguntas técnicas (código, lógica, API, banco de dados)
+
+    Se categoria = estagio:
+    - Faça perguntas simples, comportamentais e de aprendizado
+
+    Se categoria = corporativo:
+    - Perguntas sobre comunicação, negócios e experiência
+
+    Se categoria = operacional:
+    - Perguntas práticas do dia a dia
+
+    Se categoria = geral:
+    - Perguntas genéricas de entrevista
+
+    REGRAS:
+    - Faça apenas 1 pergunta por vez
+    - Sempre avalie a resposta antes da próxima pergunta
+    - NÃO faça perguntas genéricas se houver categoria definida
+    - Seja coerente com a vaga
+
+    Comece com uma saudação + primeira pergunta.
     """
 
     return ChatPromptTemplate.from_messages([
@@ -75,18 +135,20 @@ def get_interview_prompt(cargo):
 
 def get_feedback_prompt():
     system_template = """
-    Você agora é um Mentor de Carreira.
+    Você é um Mentor de Carreira.
 
-    Analise o histórico da entrevista e gere:
+    IMPORTANTE:
+    - Se o candidato respondeu menos de 2 perguntas → "Candidato inválido" e nota 0
+    - Caso contrário → avaliação normal
+    - Se as respostas forem totalmente fora de contexto, não pense duas vezes para zerar a nota do candidato
 
+    Gere:
     - Pontos Fortes
     - Pontos a Melhorar
-    - Nota de 0 a 10
-    - Recomendações de estudo
-    - Caso apenas tenho recebido menos de 3 respostas, diga que não foi possivel validar o canditado e ele foi desclassificado.
+    - Nota (0 a 10)
+    - Recomendações
 
-    Use Markdown com bullet points.
-    Seja construtivo e claro.
+    Use markdown.
     """
 
     return ChatPromptTemplate.from_messages([
@@ -95,13 +157,11 @@ def get_feedback_prompt():
         HumanMessagePromptTemplate.from_template("{input}")
     ])
 
-
 # ==========================================
-# 3. INTERFACE
+# UI
 # ==========================================
-st.title("🤖 SimulAI: Simulador de Entrevistas Técnicas")
+st.title("🤖 Plataforma de Entrevista")
 
-# Estados
 if "fase" not in st.session_state:
     st.session_state.fase = "setup"
 
@@ -111,15 +171,34 @@ if "messages" not in st.session_state:
 if "conversation" not in st.session_state:
     st.session_state.conversation = None
 
+if "respostas_count" not in st.session_state:
+    st.session_state.respostas_count = 0
+
+if "encerrar_entrevista" not in st.session_state:
+    st.session_state.encerrar_entrevista = False
+
 # ==========================================
-# FASE 1: SETUP
+# SETUP
 # ==========================================
 if st.session_state.fase == "setup":
-    st.markdown("### Prepare-se para sua entrevista")
 
-    cargo = st.text_input("Qual vaga você quer simular?")
+    st.markdown("### Prepare-se")
 
-    if st.button("Iniciar Entrevista") and cargo:
+    cargo = st.text_input("Qual vaga?")
+
+    if st.button("Iniciar") and cargo:
+
+        if not is_cargo_valido(cargo):
+
+            st.session_state.messages = [{
+                "role": "assistant",
+                "content": "❌ Candidato inválido.\n\n📊 Gerando feedback..."
+            }]
+
+            st.session_state.fase = "feedback"
+            st.session_state.respostas_count = 0
+            st.rerun()
+
         st.session_state.conversation = ConversationChain(
             llm=llm,
             memory=memory,
@@ -129,84 +208,111 @@ if st.session_state.fase == "setup":
 
         st.session_state.fase = "entrevista"
         st.session_state.messages = [
-            {"role": "system", "content": f"Simulação iniciada para: {cargo}"}
+            {"role": "system", "content": f"Vaga: {cargo}"}
         ]
+        st.session_state.respostas_count = 0
+        st.session_state.encerrar_entrevista = False
 
         st.rerun()
 
 # ==========================================
-# FASE 2: ENTREVISTA
+# ENTREVISTA
 # ==========================================
 elif st.session_state.fase == "entrevista":
 
-    # Histórico
     for message in st.session_state.messages:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-    # Primeira pergunta da IA
+    # Primeira pergunta
     if len(st.session_state.messages) == 1:
         with st.chat_message("assistant"):
-            with st.spinner("Gerando pergunta..."):
-                resposta = st.session_state.conversation.predict(
-                    input="Olá, estou pronto para a entrevista."
-                )
+            resposta = st.session_state.conversation.predict(input="Iniciar")
+            st.markdown(resposta)
 
-                st.markdown(resposta)
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": resposta
-                })
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": resposta
+            })
 
-    # Input do usuário
-    user_input = st.chat_input("Digite sua resposta ou 'Finalizar'")
+    # Input
+    if st.session_state.respostas_count < 4:
+        user_input = st.chat_input("Digite sua resposta")
 
-    if user_input:
+        if user_input:
 
-        if user_input.lower().strip() == "finalizar":
-            st.session_state.fase = "feedback"
-            st.rerun()
+            st.session_state.messages.append({
+                "role": "user",
+                "content": user_input
+            })
 
-        # Mensagem usuário
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_input
-        })
+            st.session_state.respostas_count += 1
 
-        with st.chat_message("user"):
-            st.markdown(user_input)
+            with st.chat_message("user"):
+                st.markdown(user_input)
 
-        # Resposta IA
-        with st.chat_message("assistant"):
-            with st.spinner("Analisando resposta..."):
-                resposta = st.session_state.conversation.predict(
-                    input=user_input
-                )
+            with st.chat_message("assistant"):
 
-                st.markdown(resposta)
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": resposta
-                })
+                if st.session_state.respostas_count >= 4:
+
+                    resposta_final = """
+✅ Entrevista Encerrada.
+
+📊 Gerando Feedback...
+                    """
+
+                    st.markdown(resposta_final)
+
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": resposta_final
+                    })
+
+                    st.session_state.encerrar_entrevista = True
+
+                else:
+                    resposta = st.session_state.conversation.predict(input=user_input)
+                    st.markdown(resposta)
+
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": resposta
+                    })
+
+    if st.session_state.encerrar_entrevista:
+        st.session_state.encerrar_entrevista = False
+        st.session_state.fase = "feedback"
+        st.rerun()
 
 # ==========================================
-# FASE 3: FEEDBACK
+# FEEDBACK
 # ==========================================
 elif st.session_state.fase == "feedback":
 
-    st.markdown("### 📊 Relatório de Desempenho")
+    st.markdown("### 📊 Feedback")
 
-    with st.spinner("Gerando feedback..."):
-        feedback_chain = ConversationChain(
-            llm=llm,
-            memory=memory,
-            prompt=get_feedback_prompt()
-        )
+    respostas = st.session_state.respostas_count
 
-        relatorio = feedback_chain.predict(
-            input="Gere o feedback completo da entrevista."
-        )
+    if respostas < 2:
+        st.markdown("""
+### ❌ Candidato inválido
+
+Nota: **0**
+
+O candidato não respondeu perguntas suficientes para avaliação.
+""")
+    else:
+        with st.spinner("Analisando sua entrevista..."):
+            feedback_chain = ConversationChain(
+                llm=llm,
+                memory=memory,
+                prompt=get_feedback_prompt()
+            )
+
+            relatorio = feedback_chain.predict(
+                input=f"O candidato respondeu {respostas} perguntas. Gere o feedback."
+            )
 
         st.markdown(relatorio)
 
