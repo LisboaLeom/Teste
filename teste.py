@@ -2,9 +2,10 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 
+# Imports corretos para 2026
 from langchain_openai import ChatOpenAI
-from langchain_community.memory import ConversationSummaryBufferMemory
-from langchain.chains.conversation.base import ConversationChain
+from langchain.memory import ConversationSummaryBufferMemory # Volta para o 'langchain'
+from langchain.chains import ConversationChain # Import direto
 from langchain_core.prompts import (
     ChatPromptTemplate,
     MessagesPlaceholder,
