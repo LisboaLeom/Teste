@@ -1,10 +1,7 @@
 streamlit
+python-dotenv
 langchain
-langchain-community
 langchain-openai
+langchain-community
 langchain-core
 openai
-tiktoken
-python-dotenv
-neo4j
-pydantic==1.10.9
