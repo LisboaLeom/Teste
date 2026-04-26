@@ -3,8 +3,8 @@ import os
 from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI
-from langchain.memory import ConversationSummaryBufferMemory
-from langchain.chains import ConversationChain
+from langchain_community.memory import ConversationSummaryBufferMemory
+from langchain.chains.conversation.base import ConversationChain
 from langchain_core.prompts import (
     ChatPromptTemplate,
     MessagesPlaceholder,
