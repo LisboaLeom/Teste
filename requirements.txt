@@ -5,3 +5,5 @@ langchain-core==0.2.33
 langchain-openai==0.1.22
 openai==1.40.0
 tiktoken==0.7.0
+streamlit==1.33.0
+httpx>=0.28.0
