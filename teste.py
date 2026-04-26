@@ -47,6 +47,8 @@ def init_llm_and_memory():
 
     return llm, memory
 
+llm, memory = init_llm_and_memory()
+
 # ==========================================
 # VALIDAÇÃO DE CARGO
 # ==========================================
